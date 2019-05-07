@@ -1,0 +1,188 @@
+package client;
+
+import java.awt.Color;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.net.Socket;
+
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JPasswordField;
+import javax.swing.JTextField;
+import javax.swing.UIManager;
+
+
+
+public class Login extends JFrame implements ActionListener{
+	JLabel label_username,label_error_username;
+	JLabel label_pwd,label_again_pwd,label_error_again_pwd;
+	JTextField text_username;
+	JPasswordField text_pwd,text_again_pwd;
+	JButton button;
+	Socket socket;
+	DataOutputStream out;
+	
+	public Login(Socket so ) {	
+		super();
+		socket = so;
+		try {
+			out = new DataOutputStream(socket.getOutputStream());
+		} catch (IOException e) {
+		}
+        this.setSize(285,215);
+        this.setTitle("注册");//设置窗口标题
+        this.getContentPane().setLayout(null);//设置布局控制器
+ 
+        System.out.println("注册页面");
+		label_username = new JLabel();
+		label_username.setBounds(10,5,200,20);
+		label_username.setText("请取一个用户名");
+		
+		label_pwd = new JLabel();
+		label_pwd.setBounds(30,67,52,20);
+		label_pwd.setText("密码");
+		
+		label_again_pwd = new JLabel();
+		label_again_pwd.setBounds(20,102,72,20);
+		label_again_pwd.setText("确认密码");
+		
+
+		label_error_username = new JLabel();
+		label_error_username.setBounds(77,47,200,20);
+		label_error_username.setForeground(Color.red);
+		label_error_username.setText("");
+		
+		
+		label_error_again_pwd = new JLabel();
+		label_error_again_pwd.setBounds(77,120,200,20);
+		label_error_again_pwd.setForeground(Color.red);
+		label_error_again_pwd.setText("");
+		
+		
+		text_username = new JTextField();
+		text_username.setBounds(77,25,160,25);
+
+		text_pwd = new JPasswordField();
+		text_pwd.setBounds(77,65,160,25);
+		text_pwd.setEchoChar('*');
+
+		text_again_pwd = new JPasswordField();
+		text_again_pwd.setBounds(77,100,160,25);
+		text_again_pwd.setEchoChar('*');
+
+		
+		button = new JButton();
+        button.setBounds(101,145,60,25);
+        button.setText("注册");
+        button.addActionListener(this);//添加监听器类，其主要的响应都由监听器类的方法实现
+
+		
+        
+		getContentPane().add(label_username,null);
+		getContentPane().add(label_pwd,null);
+		getContentPane().add(label_again_pwd,null);
+		getContentPane().add(label_error_username,null);
+		getContentPane().add(label_error_again_pwd,null);
+		getContentPane().add(text_username,null);
+		getContentPane().add(text_pwd,null);
+		getContentPane().add(text_again_pwd,null);
+		getContentPane().add(button,null);
+		
+		//加载 （add）完  再加这几句
+//		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);//一定要设置关闭
+		setVisible(true);
+	}
+	
+	public String get_Socket_Data() {
+		synchronized (Manage.login) {
+			System.out.println("解锁");
+			Manage.login.notifyAll();
+			return Manage.getData();
+		}
+	}
+	
+	@Override
+	public void actionPerformed(ActionEvent e) {
+		// TODO 自动生成的方法存根
+		boolean flag = true;
+		String user_name = text_username.getText().toString();
+		String pwd = text_pwd.getText().toString();
+		String again_pwd = text_again_pwd.getText().toString();
+		//检测密码
+		if (pwd.isEmpty()||again_pwd.isEmpty()) {
+			label_error_again_pwd.setText("请输入密码");
+			flag = false;
+		}else if (!pwd.equals(again_pwd)) {
+			label_error_again_pwd.setText("2次密码不一致");
+			System.out.println("密码  ："+pwd +"  and  "+again_pwd);
+			flag = false;
+		}else {
+			label_error_again_pwd.setText(null);
+		}
+		System.out.println("106 106 106");
+		//检测用户名是否正确
+		if (user_name.isEmpty()) {
+			label_error_username.setText("请输入用户名");
+			flag = false;
+		}else if ("name_list".equals(user_name)) {
+			label_error_username.setText("系统占用 请换一个名字");
+			flag = false;
+		}else {		//检测用户名是已存在   
+			try {
+				String if_Usernae_Exist = null;
+				out.writeUTF("if_Username_Exist");
+				out.writeUTF(user_name);
+				System.out.println("上锁");
+				if_Usernae_Exist = get_Socket_Data();
+				
+				// 判断 是否注册成功 用户名是否被占用 请换一个名字
+				if ("un_Exist".equals(if_Usernae_Exist)) {
+					label_error_username.setText("");
+					System.out.println("un_Exist 该用户名可以注册");
+				}else {
+					label_error_username.setText(if_Usernae_Exist);
+					flag = false;
+				}		
+				
+			} catch (IOException  e1) {
+				System.out.println("user_Exist获取错误");
+			}
+									
+		}
+		System.out.println("是否满足注册条件    :"+flag);
+		//发送用户名和密码 创建用户  
+		if (flag) {
+			try {
+				String flag_Login;
+				out.writeUTF("Login");
+				out.writeUTF(user_name);
+				out.writeUTF(pwd);
+				flag_Login = get_Socket_Data();
+				System.out.println(flag_Login);
+				
+				if (!"OK_Login".equals(flag_Login)) {
+					label_error_username.setText("flag_Login");
+				}
+				
+				
+			} catch (IOException e1) {
+				System.out.println("user_Exist获取错误");
+				}
+								
+			
+			dispose(); 	//关闭窗口
+
+		}
+		
+
+			
+		
+	}
+	
+	
+	
+}
